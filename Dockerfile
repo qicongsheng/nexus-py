@@ -16,7 +16,7 @@ WORKDIR /app
 # 复制项目文件
 COPY requirements.txt .
 COPY templates/ ./templates/
-COPY nexus_proxy.py .
+COPY nexus_py.py .
 COPY config.py .
 
 # 安装系统依赖
@@ -27,4 +27,4 @@ RUN pip install --no-cache-dir -r requirements.txt \
 EXPOSE 8081
 
 # 设置启动命令
-CMD ["python", "nexus_proxy.py"]
+CMD ["python", "nexus_py.py"]
