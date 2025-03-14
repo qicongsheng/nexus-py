@@ -11,7 +11,7 @@ auth = HTTPBasicAuth()
 
 # 配置
 app.config.update(
-    REPO_ROOT=os.path.expanduser("./repository"),  # 本地仓库路径
+    REPO_ROOT=os.path.expanduser("~/.m2/repository"),  # 本地仓库路径
     REMOTE_REPO="https://repo1.maven.org/maven2/",     # 远程 Maven 中央仓库
     USERS={  # 用户凭证（用户名: 密码）
         "deploy_user": "deploy_password"
