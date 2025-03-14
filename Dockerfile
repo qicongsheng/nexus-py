@@ -17,9 +17,8 @@ COPY maven_proxy/templates/ ./templates/
 COPY maven_proxy/proxy.py .
 COPY maven_proxy/config.py .
 
-RUN pip install --no-cache-dir -r requirements.txt \
-    && mkdir -p /data/repository
+RUN pip install --no-cache-dir maven-proxy -U && mkdir -p /data/repository
 
 EXPOSE 8081
 
-CMD ["python", "nexus_py.py"]
+CMD ["python", "maven-proxy"]
