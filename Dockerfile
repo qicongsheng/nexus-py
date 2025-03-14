@@ -20,11 +20,7 @@ COPY nexus_proxy.py .
 COPY config.py .
 
 # 安装系统依赖
-RUN apk add --no-cache \
-    build-base \
-    libffi-dev \
-    openssl-dev \
-    && pip install --no-cache-dir -r requirements.txt \
+RUN pip install --no-cache-dir -r requirements.txt \
     && mkdir -p /data/repository
 
 # 暴露端口
