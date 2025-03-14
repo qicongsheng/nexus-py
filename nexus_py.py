@@ -12,13 +12,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, send_from_directory, abort, Response, render_template
 from flask_httpauth import HTTPBasicAuth
 
-from config import Config
+from config import config
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 # 配置
-app.config.from_object(Config)
+app.config.from_object(config)
 app.url_map.strict_slashes = False
 context_path = app.config['CONTEXT_PATH']
 
