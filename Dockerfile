@@ -1,5 +1,5 @@
 # 使用官方Python Alpine镜像
-FROM python:3.9-alpine
+FROM python:3.9.21-alpine3.20
 
 # 设置环境变量（可覆盖）
 ENV AUTH_USER=user \
