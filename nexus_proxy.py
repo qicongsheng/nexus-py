@@ -1,14 +1,18 @@
-import os
-import requests
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# Author: qicongsheng
 import hashlib
+import os
+import time
+from datetime import datetime
+from xml.etree import ElementTree as ET
+
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, send_from_directory, abort, Response, render_template
 from flask_httpauth import HTTPBasicAuth
-from xml.etree import ElementTree as ET
-from datetime import datetime
-from config import Config
-from apscheduler.schedulers.background import BackgroundScheduler
-import time
 
+from config import Config
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
@@ -18,9 +22,11 @@ app.config.from_object(Config)
 app.url_map.strict_slashes = False
 context_path = app.config['CONTEXT_PATH']
 
+
 # 获取本地路径
 def get_local_path(path):
     return os.path.join(app.config['REPO_ROOT'], path)
+
 
 # 从远程仓库获取文件
 def fetch_from_remote(path):
@@ -53,11 +59,13 @@ def generate_empty_metadata(path):
     ET.SubElement(metadata, "versioning")
     return ET.tostring(metadata, encoding="utf-8", xml_declaration=True)
 
+
 # 生成文件的 SHA1 校验值
 def generate_sha1(content):
     sha1 = hashlib.sha1()
     sha1.update(content)
     return sha1.hexdigest()
+
 
 # 生成文件的 MD5 校验值
 def generate_md5(content):
@@ -65,10 +73,12 @@ def generate_md5(content):
     md5.update(content)
     return md5.hexdigest()
 
+
 # 辅助函数：获取文件的最后修改时间
 def get_last_modified(file_path):
     timestamp = os.path.getmtime(file_path)
     return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
 
 # 辅助函数：获取文件大小
 def get_file_size(file_path):
@@ -79,6 +89,7 @@ def get_file_size(file_path):
         return f"{size / 1024:.2f} KB"
     else:
         return f"{size / (1024 * 1024):.2f} MB"
+
 
 # 生成文件列表的 HTML 页面（Nginx 风格）
 def generate_directory_listing(path):
@@ -91,14 +102,12 @@ def generate_directory_listing(path):
     items.sort()
     files = []
     dirs = []
-
     for item in items:
         item_path = os.path.join(local_path, item)
         if os.path.isdir(item_path):
             dirs.append(item + "/")
         else:
             files.append(item)
-
     # 计算父路径
     if path == "/":
         parent_path = "/"
@@ -120,6 +129,8 @@ def generate_directory_listing(path):
         get_last_modified=get_last_modified,
         get_file_size=get_file_size
     )
+
+
 # 处理 maven-metadata.xml 请求
 def handle_metadata(path):
     local_path = get_local_path(path)
@@ -161,11 +172,13 @@ def verify_password(username, password):
         return username
     return None
 
+
 # 处理根路径请求
 @app.route(f'{context_path}/', methods=['GET'])
 @auth.login_required
 def handle_root():
     return handle_get("")
+
 
 @app.route(f'{context_path}/<path:path>', methods=['GET', 'PUT', 'HEAD'])
 @auth.login_required
@@ -176,6 +189,7 @@ def handle_path(path):
         return handle_put(path)
     elif request.method == 'HEAD':
         return handle_head(path)
+
 
 # 处理 GET 请求
 def handle_get(path):
@@ -197,6 +211,7 @@ def handle_get(path):
             return send_from_directory(os.path.dirname(local_path), os.path.basename(local_path))
         abort(404)
 
+
 # 处理 HEAD 请求
 def handle_head(path):
     local_path = get_local_path(path)
@@ -204,25 +219,22 @@ def handle_head(path):
         return Response(headers={'Content-Length': os.path.getsize(local_path)})
     abort(404)
 
+
 # 处理 PUT 请求（需要认证）
 def handle_put(path):
     local_path = get_local_path(path)
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
-
     try:
         with open(local_path, 'wb') as f:
             f.write(request.data)
-
         # 如果是 maven-metadata.xml，生成校验文件
         if path.endswith("maven-metadata.xml"):
             sha1_content = generate_sha1(request.data)
             with open(local_path + ".sha1", 'w') as f:
                 f.write(sha1_content)
-
             md5_content = generate_md5(request.data)
             with open(local_path + ".md5", 'w') as f:
                 f.write(md5_content)
-
         return Response("Deployment successful", 201)
     except Exception as e:
         return Response(f"Deployment failed: {str(e)}", 500)
