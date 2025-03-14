@@ -121,6 +121,7 @@ def generate_directory_listing(path):
     return render_template(
         "directory_listing.html",
         path=path,
+        context_path=context_path,
         parent_path=parent_path,
         local_path=local_path,
         dirs=dirs,
