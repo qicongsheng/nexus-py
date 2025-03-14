@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="maven-proxy",
-    version="0.0.1",
+    version="1.0.1",
     author="qicongsheng",
     author_email="qicongsheng@outlook.com",
     description="Maven Repository Proxy with caching and authentication",
