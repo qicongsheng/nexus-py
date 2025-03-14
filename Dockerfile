@@ -28,7 +28,7 @@ RUN apk add --no-cache \
     && mkdir -p /data/repository
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 8081
 
 # 设置启动命令
 CMD ["python", "nexus_proxy.py"]
