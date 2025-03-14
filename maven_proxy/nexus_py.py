@@ -12,7 +12,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, request, send_from_directory, abort, Response, render_template
 from flask_httpauth import HTTPBasicAuth
 
-from config import config
+from maven_proxy.config import config
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()

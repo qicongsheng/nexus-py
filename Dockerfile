@@ -13,9 +13,9 @@ ENV AUTH_USER=user \
 WORKDIR /app
 
 COPY requirements.txt .
-COPY templates/ ./templates/
-COPY nexus_py.py .
-COPY config.py .
+COPY maven_proxy/templates/ ./templates/
+COPY maven_proxy/nexus_py.py .
+COPY maven_proxy/config.py .
 
 RUN pip install --no-cache-dir -r requirements.txt \
     && mkdir -p /data/repository
