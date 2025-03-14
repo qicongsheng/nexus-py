@@ -2,7 +2,7 @@ import os
 
 class Config:
   # 本地仓库路径
-  REPO_ROOT = os.getenv("REPO_ROOT", os.path.expanduser("~/m2./repository"))
+  REPO_ROOT = os.getenv("LOCAL_REPO_DIR", os.path.expanduser("~/m2./repository"))
 
   # 远程Maven仓库
   REMOTE_REPO = os.getenv("REMOTE_REPO", "https://repo1.maven.org/maven2/")

@@ -36,6 +36,7 @@ def fetch_from_remote(path):
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
             with open(local_path, 'wb') as f:
                 f.write(resp.content)
+
             return True
         return False
     except Exception as e:
@@ -226,22 +227,31 @@ def handle_put(path):
     except Exception as e:
         return Response(f"Deployment failed: {str(e)}", 500)
 
-def cleanup_empty_folders():
-    print("Cleaning up of empty folders start...")
-    cutoff_time = time.time() - app.config['CLEANUP_AGE']
 
+def cleanup_empty_folders():
+    print("Starting cleanup of empty folders...")
+    cutoff_time = time.time() - app.config['CLEANUP_AGE']
+    deleted_folders = []
+    # 遍历 REPO_ROOT 目录
     for root, dirs, files in os.walk(app.config['REPO_ROOT'], topdown=False):
         for dir_name in dirs:
             dir_path = os.path.join(root, dir_name)
             try:
-                if not os.listdir(dir_path):  # 检查是否为空文件夹
+                # 检查是否为空文件夹
+                if not os.listdir(dir_path):
                     dir_mtime = os.path.getmtime(dir_path)
-                    if dir_mtime < cutoff_time:  # 检查是否超过清理时间
+                    # 检查是否超过清理时间
+                    if dir_mtime < cutoff_time:
                         os.rmdir(dir_path)
+                        deleted_folders.append(dir_path)
                         print(f"Deleted empty folder: {dir_path}")
             except Exception as e:
                 print(f"Failed to delete {dir_path}: {e}")
-    print("Cleaning up of empty folders end...")
+    # 如果删除了文件夹，记录日志
+    if deleted_folders:
+        print(f"Deleted {len(deleted_folders)} empty folders.")
+    else:
+        print("No empty folders to delete.")
 
 
 # 启动服务
