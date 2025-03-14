@@ -266,9 +266,7 @@ def cleanup_empty_folders():
     else:
         print("No empty folders to delete.")
 
-
-# 启动服务
-if __name__ == '__main__':
+def startup():
     # 初始化定时任务
     print("Job of cleanup of empty folders job starting...")
     scheduler = BackgroundScheduler()
@@ -276,3 +274,8 @@ if __name__ == '__main__':
     scheduler.start()
     print("Job of cleanup of empty folders job end...")
     app.run(host='0.0.0.0', port=8081, threaded=True)
+
+
+# 启动服务
+if __name__ == '__main__':
+    startup()

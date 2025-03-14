@@ -14,7 +14,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 COPY maven_proxy/templates/ ./templates/
-COPY maven_proxy/nexus_py.py .
+COPY maven_proxy/proxy.py .
 COPY maven_proxy/config.py .
 
 RUN pip install --no-cache-dir -r requirements.txt \
