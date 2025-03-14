@@ -7,7 +7,7 @@ ENV AUTH_USER=user \
     REMOTE_REPO=https://repo1.maven.org/maven2/ \
     REMOTE_REPO_USERNAME= \
     REMOTE_REPO_PASSWORD= \
-    CONTEXT_PATH=/maven2 \
+    CONTEXT_PATH="" \
     LOCAL_REPO_DIR=/data/repository
 
 # 设置工作目录
@@ -16,7 +16,7 @@ WORKDIR /app
 # 复制项目文件
 COPY requirements.txt .
 COPY templates/ ./templates/
-COPY maven_proxy.py .
+COPY nexus_proxy.py .
 COPY config.py .
 
 # 安装系统依赖
