@@ -7,7 +7,8 @@ ENV AUTH_USER=user \
     REMOTE_REPO_USERNAME= \
     REMOTE_REPO_PASSWORD= \
     CONTEXT_PATH="" \
-    LOCAL_REPO_DIR=/data/repository
+    LOCAL_REPO_DIR=/data/repository \
+    TZ=Asia/Shanghai
 
 WORKDIR /app
 
