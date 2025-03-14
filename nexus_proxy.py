@@ -5,26 +5,18 @@ from flask import Flask, request, send_from_directory, abort, Response, render_t
 from flask_httpauth import HTTPBasicAuth
 from xml.etree import ElementTree as ET
 from datetime import datetime
+from config import Config
+from apscheduler.schedulers.background import BackgroundScheduler
+import time
+
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 # 配置
-app.config.update(
-    REPO_ROOT=os.path.expanduser("~/.m2/repository"),  # 本地仓库路径
-    REMOTE_REPO="https://repo1.maven.org/maven2/",     # 远程 Maven 中央仓库
-    USERS={  # 用户凭证（用户名: 密码）
-        "deploy_user": "deploy_password"
-    },
-    CACHE_TIMEOUT=3600  # 缓存超时时间
-)
-
-# 验证用户
-@auth.verify_password
-def verify_password(username, password):
-    if username in app.config['USERS'] and app.config['USERS'][username] == password:
-        return username
-    return None
+app.config.from_object(Config)
+app.url_map.strict_slashes = False
+context_path = app.config['CONTEXT_PATH']
 
 # 获取本地路径
 def get_local_path(path):
@@ -34,7 +26,11 @@ def get_local_path(path):
 def fetch_from_remote(path):
     remote_url = app.config['REMOTE_REPO'] + path
     try:
-        resp = requests.get(remote_url, timeout=10)
+        auth = None
+        if app.config['REMOTE_REPO_USERNAME'] and app.config['REMOTE_REPO_PASSWORD']:
+            auth = (app.config['REMOTE_REPO_USERNAME'], app.config['REMOTE_REPO_PASSWORD'])
+
+        resp = requests.get(remote_url, auth=auth, timeout=10)
         if resp.status_code == 200:
             local_path = get_local_path(path)
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
@@ -45,6 +41,7 @@ def fetch_from_remote(path):
     except Exception as e:
         print(f"Remote fetch failed: {e}")
         return False
+
 
 # 生成空的 maven-metadata.xml
 def generate_empty_metadata(path):
@@ -155,13 +152,31 @@ def handle_metadata(path):
         os.path.dirname(local_path),
         os.path.basename(local_path))
 
+
+# 验证用户
+@auth.verify_password
+def verify_password(username, password):
+    if username in app.config['USERS'] and app.config['USERS'][username] == password:
+        return username
+    return None
+
 # 处理根路径请求
-@app.route('/', methods=['GET'])
+@app.route(f'{context_path}/', methods=['GET'])
+@auth.login_required
 def handle_root():
     return handle_get("")
 
+@app.route(f'{context_path}/<path:path>', methods=['GET', 'PUT', 'HEAD'])
+@auth.login_required
+def handle_path(path):
+    if request.method == 'GET':
+        return handle_get(path)
+    elif request.method == 'PUT':
+        return handle_put(path)
+    elif request.method == 'HEAD':
+        return handle_head(path)
+
 # 处理 GET 请求
-@app.route('/<path:path>', methods=['GET'])
 def handle_get(path):
     local_path = get_local_path(path)
     if os.path.isfile(local_path):
@@ -182,7 +197,6 @@ def handle_get(path):
         abort(404)
 
 # 处理 HEAD 请求
-@app.route('/<path:path>', methods=['HEAD'])
 def handle_head(path):
     local_path = get_local_path(path)
     if os.path.exists(local_path):
@@ -190,8 +204,6 @@ def handle_head(path):
     abort(404)
 
 # 处理 PUT 请求（需要认证）
-@app.route('/<path:path>', methods=['PUT'])
-@auth.login_required
 def handle_put(path):
     local_path = get_local_path(path)
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
@@ -214,6 +226,29 @@ def handle_put(path):
     except Exception as e:
         return Response(f"Deployment failed: {str(e)}", 500)
 
+def cleanup_empty_folders():
+    print("Starting cleanup of empty folders...")
+    cutoff_time = time.time() - app.config['CLEANUP_AGE']
+
+    for root, dirs, files in os.walk(app.config['REPO_ROOT'], topdown=False):
+        for dir_name in dirs:
+            dir_path = os.path.join(root, dir_name)
+            try:
+                if not os.listdir(dir_path):  # 检查是否为空文件夹
+                    dir_mtime = os.path.getmtime(dir_path)
+                    if dir_mtime < cutoff_time:  # 检查是否超过清理时间
+                        os.rmdir(dir_path)
+                        print(f"Deleted empty folder: {dir_path}")
+            except Exception as e:
+                print(f"Failed to delete {dir_path}: {e}")
+
+
 # 启动服务
 if __name__ == '__main__':
+    # 初始化定时任务
+    print("Job of cleanup of empty folders job starting...")
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(cleanup_empty_folders, 'interval', seconds=app.config['CLEANUP_INTERVAL'])
+    scheduler.start()
+    print("Job of cleanup of empty folders job end...")
     app.run(host='0.0.0.0', port=8080, threaded=True)

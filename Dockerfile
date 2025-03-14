@@ -13,7 +13,8 @@ RUN apk add --no-cache \
 # 复制项目文件
 COPY requirements.txt .
 COPY templates/ ./templates/
-COPY nexus_proxy.py .
+COPY maven_proxy.py .
+COPY config.py .
 
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
@@ -21,5 +22,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 暴露端口
 EXPOSE 8080
 
+# 设置环境变量（可覆盖）
+ENV REPO_ROOT=/data/repository
+ENV CONTEXT_PATH=/maven2
+ENV CLEANUP_INTERVAL=300
+ENV CLEANUP_AGE=3600
+
+# 创建数据目录
+RUN mkdir -p /data/repository
+
 # 设置启动命令
-CMD ["python", "nexus_proxy.py"]
+CMD ["python", "maven_proxy.py"]
