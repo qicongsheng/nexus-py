@@ -10,13 +10,6 @@ ENV AUTH_USER=user \
     LOCAL_REPO_DIR=/data/repository \
     TZ=Asia/Shanghai
 
-WORKDIR /app
-
-COPY requirements.txt .
-COPY maven_proxy/templates/ ./templates/
-COPY maven_proxy/proxy.py .
-COPY maven_proxy/config.py .
-
 RUN pip install --no-cache-dir maven-proxy -U && mkdir -p /data/repository
 
 EXPOSE 8081
