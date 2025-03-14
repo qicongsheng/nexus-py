@@ -227,7 +227,7 @@ def handle_put(path):
         return Response(f"Deployment failed: {str(e)}", 500)
 
 def cleanup_empty_folders():
-    print("Starting cleanup of empty folders...")
+    print("Cleaning up of empty folders start...")
     cutoff_time = time.time() - app.config['CLEANUP_AGE']
 
     for root, dirs, files in os.walk(app.config['REPO_ROOT'], topdown=False):
@@ -241,6 +241,7 @@ def cleanup_empty_folders():
                         print(f"Deleted empty folder: {dir_path}")
             except Exception as e:
                 print(f"Failed to delete {dir_path}: {e}")
+    print("Cleaning up of empty folders end...")
 
 
 # 启动服务
