@@ -1,0 +1,219 @@
+import os
+import requests
+import hashlib
+from flask import Flask, request, send_from_directory, abort, Response, render_template
+from flask_httpauth import HTTPBasicAuth
+from xml.etree import ElementTree as ET
+from datetime import datetime
+
+app = Flask(__name__)
+auth = HTTPBasicAuth()
+
+# 配置
+app.config.update(
+    REPO_ROOT=os.path.expanduser("./repository"),  # 本地仓库路径
+    REMOTE_REPO="https://repo1.maven.org/maven2/",     # 远程 Maven 中央仓库
+    USERS={  # 用户凭证（用户名: 密码）
+        "deploy_user": "deploy_password"
+    },
+    CACHE_TIMEOUT=3600  # 缓存超时时间
+)
+
+# 验证用户
+@auth.verify_password
+def verify_password(username, password):
+    if username in app.config['USERS'] and app.config['USERS'][username] == password:
+        return username
+    return None
+
+# 获取本地路径
+def get_local_path(path):
+    return os.path.join(app.config['REPO_ROOT'], path)
+
+# 从远程仓库获取文件
+def fetch_from_remote(path):
+    remote_url = app.config['REMOTE_REPO'] + path
+    try:
+        resp = requests.get(remote_url, timeout=10)
+        if resp.status_code == 200:
+            local_path = get_local_path(path)
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            with open(local_path, 'wb') as f:
+                f.write(resp.content)
+            return True
+        return False
+    except Exception as e:
+        print(f"Remote fetch failed: {e}")
+        return False
+
+# 生成空的 maven-metadata.xml
+def generate_empty_metadata(path):
+    metadata = ET.Element("metadata")
+    group_id, artifact_id = path.split("/")[-3:-1]
+    ET.SubElement(metadata, "groupId").text = group_id
+    ET.SubElement(metadata, "artifactId").text = artifact_id
+    ET.SubElement(metadata, "versioning")
+    return ET.tostring(metadata, encoding="utf-8", xml_declaration=True)
+
+# 生成文件的 SHA1 校验值
+def generate_sha1(content):
+    sha1 = hashlib.sha1()
+    sha1.update(content)
+    return sha1.hexdigest()
+
+# 生成文件的 MD5 校验值
+def generate_md5(content):
+    md5 = hashlib.md5()
+    md5.update(content)
+    return md5.hexdigest()
+
+# 辅助函数：获取文件的最后修改时间
+def get_last_modified(file_path):
+    timestamp = os.path.getmtime(file_path)
+    return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
+# 辅助函数：获取文件大小
+def get_file_size(file_path):
+    size = os.path.getsize(file_path)
+    if size < 1024:
+        return f"{size} B"
+    elif size < 1024 * 1024:
+        return f"{size / 1024:.2f} KB"
+    else:
+        return f"{size / (1024 * 1024):.2f} MB"
+
+# 生成文件列表的 HTML 页面（Nginx 风格）
+def generate_directory_listing(path):
+    local_path = get_local_path(path)
+    if not os.path.exists(local_path):
+        return None
+
+    # 获取目录下的文件和子目录
+    items = os.listdir(local_path)
+    items.sort()
+    files = []
+    dirs = []
+
+    for item in items:
+        item_path = os.path.join(local_path, item)
+        if os.path.isdir(item_path):
+            dirs.append(item + "/")
+        else:
+            files.append(item)
+
+    # 计算父路径
+    if path == "/":
+        parent_path = "/"
+    else:
+        parent_path = os.path.dirname(path.rstrip("/"))
+        if not parent_path:
+            parent_path = "/"
+        else:
+            parent_path = "/" + parent_path + "/"
+
+    return render_template(
+        "directory_listing.html",
+        path=path,
+        parent_path=parent_path,
+        local_path=local_path,
+        dirs=dirs,
+        files=files,
+        os=os,
+        get_last_modified=get_last_modified,
+        get_file_size=get_file_size
+    )
+# 处理 maven-metadata.xml 请求
+def handle_metadata(path):
+    local_path = get_local_path(path)
+    if os.path.isfile(local_path):
+        return send_from_directory(
+            os.path.dirname(local_path),
+            os.path.basename(local_path))
+
+    if fetch_from_remote(path):
+        return send_from_directory(
+            os.path.dirname(local_path),
+            os.path.basename(local_path))
+
+    # 如果远程仓库也不存在，生成一个空的 maven-metadata.xml
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    empty_metadata = generate_empty_metadata(path)
+    with open(local_path, 'wb') as f:
+        f.write(empty_metadata)
+
+    # 生成 maven-metadata.xml.sha1
+    sha1_content = generate_sha1(empty_metadata)
+    with open(local_path + ".sha1", 'w') as f:
+        f.write(sha1_content)
+
+    # 生成 maven-metadata.xml.md5
+    md5_content = generate_md5(empty_metadata)
+    with open(local_path + ".md5", 'w') as f:
+        f.write(md5_content)
+
+    return send_from_directory(
+        os.path.dirname(local_path),
+        os.path.basename(local_path))
+
+# 处理根路径请求
+@app.route('/', methods=['GET'])
+def handle_root():
+    return handle_get("")
+
+# 处理 GET 请求
+@app.route('/<path:path>', methods=['GET'])
+def handle_get(path):
+    local_path = get_local_path(path)
+    if os.path.isfile(local_path):
+        return send_from_directory(os.path.dirname(local_path), os.path.basename(local_path))
+    elif os.path.isdir(local_path):
+        listing = generate_directory_listing(path)
+        if listing:
+            return listing
+        else:
+            abort(404)
+    else:
+        # 如果是 maven-metadata.xml，特殊处理
+        if path.endswith("maven-metadata.xml"):
+            return handle_metadata(path)
+        # 尝试从远程仓库获取
+        if fetch_from_remote(path):
+            return send_from_directory(os.path.dirname(local_path), os.path.basename(local_path))
+        abort(404)
+
+# 处理 HEAD 请求
+@app.route('/<path:path>', methods=['HEAD'])
+def handle_head(path):
+    local_path = get_local_path(path)
+    if os.path.exists(local_path):
+        return Response(headers={'Content-Length': os.path.getsize(local_path)})
+    abort(404)
+
+# 处理 PUT 请求（需要认证）
+@app.route('/<path:path>', methods=['PUT'])
+@auth.login_required
+def handle_put(path):
+    local_path = get_local_path(path)
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+
+    try:
+        with open(local_path, 'wb') as f:
+            f.write(request.data)
+
+        # 如果是 maven-metadata.xml，生成校验文件
+        if path.endswith("maven-metadata.xml"):
+            sha1_content = generate_sha1(request.data)
+            with open(local_path + ".sha1", 'w') as f:
+                f.write(sha1_content)
+
+            md5_content = generate_md5(request.data)
+            with open(local_path + ".md5", 'w') as f:
+                f.write(md5_content)
+
+        return Response("Deployment successful", 201)
+    except Exception as e:
+        return Response(f"Deployment failed: {str(e)}", 500)
+
+# 启动服务
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, threaded=True)
