@@ -3,8 +3,10 @@
 # Author: qicongsheng
 from . import proxy
 
+
 def main():
-  proxy.startup()
+    proxy.startup()
+
 
 if __name__ == "__main__":
-  main()
+    main()

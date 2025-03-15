@@ -267,6 +267,7 @@ def cleanup_empty_folders():
     else:
         print("No empty folders to delete.")
 
+
 def startup():
     print(f"context_path={app.config['CONTEXT_PATH']}")
     print(f"local_repo_dir={config.REPO_ROOT}")

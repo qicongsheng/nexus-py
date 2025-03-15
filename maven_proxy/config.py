@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Author: qicongsheng
-import os
 import argparse
+import os
+
 
 class Config:
     def __init__(self):
         # 解析命令行参数
         parser = argparse.ArgumentParser(description="Maven Proxy Configuration")
-        parser.add_argument("--local-repo-dir", type=str, default=os.getenv("LOCAL_REPO_DIR", os.path.expanduser("~/.m2/repository")))
-        parser.add_argument("--remote-repo", type=str, default=os.getenv("REMOTE_REPO", "https://repo1.maven.org/maven2/"))
+        parser.add_argument("--local-repo-dir", type=str,
+                            default=os.getenv("LOCAL_REPO_DIR", os.path.expanduser("~/.m2/repository")))
+        parser.add_argument("--remote-repo", type=str,
+                            default=os.getenv("REMOTE_REPO", "https://repo1.maven.org/maven2/"))
         parser.add_argument("--remote-repo-username", type=str, default=os.getenv("REMOTE_REPO_USERNAME", None))
         parser.add_argument("--remote-repo-password", type=str, default=os.getenv("REMOTE_REPO_PASSWORD", None))
         parser.add_argument("--auth-user", type=str, default=os.getenv("AUTH_USER", "user"))
@@ -33,5 +36,3 @@ class Config:
         # 定时任务配置
         self.CLEANUP_INTERVAL = args.cleanup_interval
         self.CLEANUP_AGE = args.cleanup_age
-
-
