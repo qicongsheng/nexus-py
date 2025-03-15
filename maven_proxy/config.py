@@ -34,5 +34,4 @@ class Config:
         self.CLEANUP_INTERVAL = args.cleanup_interval
         self.CLEANUP_AGE = args.cleanup_age
 
-# 创建全局配置对象
-config = Config()
+
