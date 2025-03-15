@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir maven-proxy -U && mkdir -p /data/repository
 
 EXPOSE 8081
 
-CMD ["python", "maven-proxy"]
+CMD ["maven-proxy"]
