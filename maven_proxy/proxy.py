@@ -278,7 +278,7 @@ def startup():
     scheduler.add_job(cleanup_empty_folders, 'interval', seconds=app.config['CLEANUP_INTERVAL'])
     scheduler.start()
     print("Job of cleanup of empty folders job end...")
-    app.run(host='0.0.0.0', port=8081, threaded=True)
+    app.run(host='0.0.0.0', port=config.PORT, threaded=True)
 
 
 # 启动服务

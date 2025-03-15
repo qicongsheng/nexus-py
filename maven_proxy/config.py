@@ -9,6 +9,7 @@ class Config:
     def __init__(self):
         # 解析命令行参数
         parser = argparse.ArgumentParser(description="Maven Proxy Configuration")
+        parser.add_argument("--port",  type=int, default=int(os.getenv("PORT", 8081)))
         parser.add_argument("--local-repo-dir", type=str,
                             default=os.getenv("LOCAL_REPO_DIR", os.path.expanduser("~/.m2/repository")))
         parser.add_argument("--remote-repo", type=str,
@@ -22,6 +23,8 @@ class Config:
         parser.add_argument("--cleanup-age", type=int, default=int(os.getenv("CLEANUP_AGE", 3600)))
         args = parser.parse_args()
 
+        # 本地仓库端口
+        self.PORT = args.port
         # 本地仓库路径
         self.REPO_ROOT = args.local_repo_dir
         # 远程Maven仓库
